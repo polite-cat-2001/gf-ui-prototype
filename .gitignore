@@ -1,0 +1,12 @@
+*build*/
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+*.sqlite
+canon.db
+ratings_output.json
+web/dist/
+data/raster/
