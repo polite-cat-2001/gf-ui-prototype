@@ -6,6 +6,7 @@
   import Breadcrumb from './lib/Breadcrumb.svelte'
   import TileGrid from './lib/TileGrid.svelte'
   import MenuPanel from './lib/MenuPanel.svelte'
+  import SideSelect from './lib/SideSelect.svelte'
 
   const tabs = [
     { id: 'play', label: 'Играть' },
@@ -73,15 +74,6 @@
         { title: 'Начать новую карьеру', sub: 'Выбор клуба и лиги' },
       ],
     },
-    quick: {
-      title: 'Быстрый матч',
-      note: 'Локальный матч на одном экране или матч против ИИ.',
-      rows: [
-        { title: 'Один игрок', sub: 'Клавиатура или геймпад' },
-        { title: 'Два игрока', sub: 'Два геймпада' },
-        { title: 'ИИ против ИИ', sub: 'Демонстрационный матч' },
-      ],
-    },
     career: {
       title: 'Карьера',
       note: 'Тренерская карьера: клуб, сезон, трансферы.',
@@ -119,11 +111,38 @@
   let viewKey = $state(0)
   let screenTimer
 
+  let screen = $state('menu')
+  let lastInput = $state('keys')
+  let padFrame
+  const padHeld = [null, null, null, null]
+  const sideOrder = ['home', 'center', 'away']
+
+  const devices = $state([
+    { id: 'pad-0', type: 'gamepad', tone: '#2f6df6', connected: false, side: 'center' },
+    { id: 'pad-1', type: 'gamepad', tone: '#e6236e', connected: false, side: 'center' },
+    { id: 'pad-2', type: 'gamepad', tone: '#f08c00', connected: false, side: 'center' },
+    { id: 'pad-3', type: 'gamepad', tone: '#0f9d76', connected: false, side: 'center' },
+    { id: 'keyboard', type: 'keyboard', tone: '#1d2138', connected: true, side: 'center' },
+  ])
+
   const tiles = $derived(tabIndex === 0 ? playTiles : settingsTiles)
   const top = $derived(stack.length ? stack[stack.length - 1] : null)
   const crumbs = $derived(top ? [tabs[tabIndex].label, ...stack.map((panel) => panel.title)] : [])
 
   const hints = $derived.by(() => {
+    if (screen === 'sides') {
+      return lastInput === 'pad'
+        ? [
+            { keys: ['A'], label: 'Далее' },
+            { keys: ['B'], label: 'Назад' },
+            { keys: ['◀', '▶'], label: 'Сторона' },
+          ]
+        : [
+            { keys: ['←', '→'], label: 'Сторона' },
+            { keys: ['Enter'], label: 'Далее' },
+            { keys: ['Esc'], label: 'Назад' },
+          ]
+    }
     if (top) {
       return top.rows?.length
         ? [
@@ -152,6 +171,54 @@
       error = caught.message
     }
   })
+
+  onMount(() => {
+    padFrame = requestAnimationFrame(pollPads)
+    return () => cancelAnimationFrame(padFrame)
+  })
+
+  function moveDevice(device, direction) {
+    if (!device.connected) return
+    const next = sideOrder.indexOf(device.side) + (direction === 'left' ? -1 : 1)
+    device.side = sideOrder[Math.min(sideOrder.length - 1, Math.max(0, next))]
+    lastInput = device.type === 'gamepad' ? 'pad' : 'keys'
+  }
+
+  function moveById(id, direction) {
+    const device = devices.find((item) => item.id === id)
+    if (device) moveDevice(device, direction)
+  }
+
+  function readPad(pad) {
+    const pressed = (index) => pad.buttons?.[index]?.pressed
+    if (pressed(14)) return 'left'
+    if (pressed(15)) return 'right'
+    const x = pad.axes?.[0] ?? 0
+    if (x < -0.55) return 'left'
+    if (x > 0.55) return 'right'
+    return null
+  }
+
+  function pollPads() {
+    const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()) : []
+
+    for (let slot = 0; slot < 4; slot += 1) {
+      const pad = pads.find((item) => item && item.index === slot) ?? null
+      const device = devices[slot]
+      const connected = Boolean(pad && pad.connected)
+
+      if (device.connected !== connected) {
+        device.connected = connected
+        if (!connected) device.side = 'center'
+      }
+
+      const direction = connected ? readPad(pad) : null
+      if (direction && direction !== padHeld[slot]) moveDevice(device, direction)
+      padHeld[slot] = direction
+    }
+
+    padFrame = requestAnimationFrame(pollPads)
+  }
 
   function selectTab(index, source = 'key') {
     const direction = index === tabIndex ? 0 : index > tabIndex ? 1 : -1
@@ -190,6 +257,10 @@
   }
 
   function back() {
+    if (screen === 'sides') {
+      transitionTo(() => (screen = 'menu'))
+      return
+    }
     if (!stack.length) return
     transitionTo(() => {
       stack.pop()
@@ -198,6 +269,13 @@
   }
 
   function openTile(tile) {
+    if (tile.id === 'quick') {
+      transitionTo(() => {
+        screen = 'sides'
+        lastInput = 'keys'
+      })
+      return
+    }
     const panel = panels[tile.id]
     if (panel) push(panel)
   }
@@ -290,6 +368,20 @@
 
   function handleKeydown(event) {
     if (leaving) return
+
+    if (screen === 'sides') {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        back()
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault()
+        const keyboard = devices.find((device) => device.type === 'keyboard')
+        moveDevice(keyboard, event.key === 'ArrowLeft' ? 'left' : 'right')
+      } else if (event.key === 'Enter') {
+        event.preventDefault()
+      }
+      return
+    }
 
     if (top) {
       if (event.key === 'Escape') {
@@ -387,6 +479,8 @@
             onhover={(i) => (rowIndex = i)}
             onpick={(i) => pickRow(top.rows[i])}
           />
+        {:else if screen === 'sides'}
+          <SideSelect {devices} onmove={moveById} />
         {:else}
           <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />
           <TileGrid

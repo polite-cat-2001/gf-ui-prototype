@@ -39,6 +39,11 @@
     <path d="M8.2 10.6v3M6.7 12.1h3" />
     <circle cx="15.6" cy="11.2" r=".85" fill="currentColor" stroke="none" />
     <circle cx="17.4" cy="13" r=".85" fill="currentColor" stroke="none" />
+  {:else if name === 'keyboard'}
+    <rect x="2.6" y="7.2" width="18.8" height="9.6" />
+    <path
+      d="M6 10.4h1.2M9 10.4h1.2M12 10.4h1.2M15 10.4h1.2M18 10.4h.4M6 13.6h1.2M17 13.6h1.2M9.2 13.6h5.6"
+    />
   {:else if name === 'monitor'}
     <rect x="3.5" y="5" width="17" height="11.5" />
     <path d="M9 20h6M12 16.5V20" />
