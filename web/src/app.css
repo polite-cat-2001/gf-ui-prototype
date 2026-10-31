@@ -518,8 +518,12 @@ button:focus-visible,
   position: relative;
   height: clamp(440px, 64vh, 700px);
   margin-top: var(--gap);
-  background: rgba(245, 247, 250, 0.9);
-  box-shadow: 0 18px 44px rgba(4, 9, 20, 0.3);
+  background: linear-gradient(
+    180deg,
+    rgba(245, 247, 250, 0.9) 0%,
+    rgba(245, 247, 250, 0.9) 50%,
+    rgba(245, 247, 250, 0) 100%
+  );
 }
 
 .side {
@@ -581,6 +585,10 @@ button:focus-visible,
   justify-content: center;
   color: var(--tone, var(--ink));
   transition: left 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+}
+
+.device .glyph {
+  filter: drop-shadow(0 0 9px rgba(255, 255, 255, 0.55));
 }
 
 .device.is-off {
