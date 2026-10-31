@@ -3,6 +3,7 @@
   import { api } from './lib/api.js'
   import Controls from './lib/Controls.svelte'
   import TabBar from './lib/TabBar.svelte'
+  import Breadcrumb from './lib/Breadcrumb.svelte'
   import TileGrid from './lib/TileGrid.svelte'
   import MenuPanel from './lib/MenuPanel.svelte'
 
@@ -98,10 +99,10 @@
         { title: 'Клиент', sub: 'Подключиться по адресу' },
       ],
     },
-    gameplay: { title: 'Геймплей', note: 'Сложность, помощники и длительность матча. Раздел в работе.', rows: [] },
-    controls: { title: 'Управление', note: 'Раскладка клавиатуры и функции геймпада. Раздел в работе.', rows: [] },
-    graphics: { title: 'Графика', note: 'Разрешение, качество и эффекты. Раздел в работе.', rows: [] },
-    audio: { title: 'Звук', note: 'Музыка, комментатор и эффекты. Раздел в работе.', rows: [] },
+    gameplay: { title: 'Геймплей', note: 'Сложность, помощники и длительность матча.', rows: [] },
+    controls: { title: 'Управление', note: 'Раскладка клавиатуры и функции геймпада.', rows: [] },
+    graphics: { title: 'Графика', note: 'Разрешение, качество и эффекты.', rows: [] },
+    audio: { title: 'Звук', note: 'Музыка, комментатор и эффекты.', rows: [] },
   }
 
   let meta = $state(null)
@@ -113,9 +114,14 @@
   let stack = $state([])
   let enterDir = $state(0)
   let enterTimer
+  let leaving = $state(false)
+  let animating = $state(false)
+  let viewKey = $state(0)
+  let screenTimer
 
   const tiles = $derived(tabIndex === 0 ? playTiles : settingsTiles)
   const top = $derived(stack.length ? stack[stack.length - 1] : null)
+  const crumbs = $derived(top ? [tabs[tabIndex].label, ...stack.map((panel) => panel.title)] : [])
 
   const hints = $derived.by(() => {
     if (top) {
@@ -162,14 +168,33 @@
     }
   }
 
+  function transitionTo(apply) {
+    if (leaving) return
+    leaving = true
+    clearTimeout(screenTimer)
+
+    screenTimer = setTimeout(() => {
+      apply()
+      viewKey += 1
+      leaving = false
+      animating = true
+      screenTimer = setTimeout(() => (animating = false), 340)
+    }, 150)
+  }
+
   function push(panel) {
-    stack.push(panel)
-    rowIndex = 0
+    transitionTo(() => {
+      stack.push(panel)
+      rowIndex = 0
+    })
   }
 
   function back() {
-    stack.pop()
-    rowIndex = 0
+    if (!stack.length) return
+    transitionTo(() => {
+      stack.pop()
+      rowIndex = 0
+    })
   }
 
   function openTile(tile) {
@@ -264,6 +289,8 @@
   }
 
   function handleKeydown(event) {
+    if (leaving) return
+
     if (top) {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -348,39 +375,41 @@
   </div>
 
   <div class="frame">
-    <div class="panel-wrap">
-      <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />
+    {#key viewKey}
+      <div class="panel-wrap" class:is-leaving={leaving} class:is-entering={animating}>
+        {#if top}
+          <Breadcrumb items={crumbs} />
+          <MenuPanel
+            title={top.title}
+            note={top.note}
+            rows={top.rows ?? []}
+            selected={rowIndex}
+            onhover={(i) => (rowIndex = i)}
+            onpick={(i) => pickRow(top.rows[i])}
+          />
+        {:else}
+          <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />
+          <TileGrid
+            {tiles}
+            selected={tileIndex}
+            active={zone === 'grid'}
+            enter={enterDir}
+            onhover={(i) => {
+              tileIndex = i
+              zone = 'grid'
+            }}
+            onpick={(i) => {
+              tileIndex = i
+              openTile(tiles[i])
+            }}
+          />
+        {/if}
 
-      {#if top}
-        <MenuPanel
-          title={top.title}
-          note={top.note}
-          rows={top.rows ?? []}
-          selected={rowIndex}
-          onhover={(i) => (rowIndex = i)}
-          onpick={(i) => pickRow(top.rows[i])}
-        />
-      {:else}
-        <TileGrid
-          {tiles}
-          selected={tileIndex}
-          active={zone === 'grid'}
-          enter={enterDir}
-          onhover={(i) => {
-            tileIndex = i
-            zone = 'grid'
-          }}
-          onpick={(i) => {
-            tileIndex = i
-            openTile(tiles[i])
-          }}
-        />
-      {/if}
-
-      <div class="legend">
-        <Controls {hints} />
+        <div class="legend">
+          <Controls {hints} />
+        </div>
       </div>
-    </div>
+    {/key}
   </div>
 
   <div class="brand">GF <span>UI</span></div>

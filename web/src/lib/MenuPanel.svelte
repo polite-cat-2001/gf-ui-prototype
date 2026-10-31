@@ -3,14 +3,12 @@
 </script>
 
 <section class="panel">
-  <header class="panel__head">
-    <p class="panel__eyebrow">Раздел</p>
-    <h2 class="panel__title">{title}</h2>
-    {#if note}<p class="panel__note">{note}</p>{/if}
-  </header>
+  {#if note}
+    <p class="panel__note">{note}</p>
+  {/if}
 
-  {#if rows.length}
-    <div class="rows">
+  <div class="rows">
+    {#if rows.length}
       {#each rows as row, i}
         <button
           class="row"
@@ -22,6 +20,11 @@
           {#if row.sub}<span class="row__sub">{row.sub}</span>{/if}
         </button>
       {/each}
-    </div>
-  {/if}
+    {:else}
+      <div class="row is-static">
+        <span class="row__title">Раздел в работе</span>
+        <span class="row__sub">Появится позже</span>
+      </div>
+    {/if}
+  </div>
 </section>
