@@ -45,6 +45,48 @@ ROLE_ORDER = {
     "CF": 9,
 }
 
+LINE_ROLES = {
+    "attack": ("CF", "LM", "RM"),
+    "midfield": ("DM", "CM", "AM"),
+    "defence": ("CB", "LB", "RB"),
+}
+
+LINE_SIZE = {"attack": 3, "midfield": 3, "defence": 4}
+
+STAR_FLOOR = 59.0
+STAR_STEP = 7.0
+
+
+def stars_for(average: float | None) -> float | None:
+    if average is None:
+        return None
+    raw = 1 + (average - STAR_FLOOR) / STAR_STEP
+    stepped = round(raw * 2) / 2
+    return max(0.5, min(5.0, stepped))
+
+
+def _line_rating(overalls: list[float], size: int) -> int | None:
+    if not overalls:
+        return None
+    best = sorted(overalls, reverse=True)[:size]
+    return int(round(sum(best) / len(best)))
+
+
+def club_ratings(club_id: str, players: list[tuple[str, float]]) -> dict:
+    overalls = [overall for _, overall in players]
+    top = sorted(overalls, reverse=True)[:11]
+    average = sum(top) / len(top) if top else None
+
+    payload = {"club_id": club_id}
+    for line, roles in LINE_ROLES.items():
+        value = _line_rating([overall for role, overall in players if role in roles], LINE_SIZE[line])
+        if value is None and average is not None:
+            value = int(round(average))
+        payload[line] = value
+    payload["stars"] = stars_for(average)
+    return payload
+
+
 
 def default_db_path() -> Path:
     return Path(os.environ.get("GF_CANON_DB", DEFAULT_DB))
@@ -172,6 +214,58 @@ class Canon:
         with self._connect() as connection:
             row = connection.execute(query, (club_id,)).fetchone()
         return self._club_row(row) if row else None
+
+    def club_ratings(self, club_id: str) -> dict | None:
+        with self._connect() as connection:
+            exists = connection.execute("SELECT 1 FROM clubs WHERE id = ?", (club_id,)).fetchone()
+            if exists is None:
+                return None
+            rows = connection.execute(
+                "SELECT role, overall FROM players WHERE club_id = ?", (club_id,)
+            ).fetchall()
+        return club_ratings(club_id, [(row["role"], row["overall"]) for row in rows])
+
+    def league_ratings(self, league_id: str) -> list[dict] | None:
+        with self._connect() as connection:
+            exists = connection.execute("SELECT 1 FROM leagues WHERE id = ?", (league_id,)).fetchone()
+            if exists is None:
+                return None
+            rows = connection.execute(
+                "SELECT c.id AS club_id, p.role AS role, p.overall AS overall "
+                "FROM clubs c LEFT JOIN players p ON p.club_id = c.id "
+                "WHERE c.league_id = ? ORDER BY c.name",
+                (league_id,),
+            ).fetchall()
+        grouped: dict[str, list[tuple[str, float]]] = {}
+        for row in rows:
+            players = grouped.setdefault(row["club_id"], [])
+            if row["overall"] is not None:
+                players.append((row["role"], row["overall"]))
+        return [club_ratings(club_id, players) for club_id, players in grouped.items()]
+
+    def national_teams(self) -> list[dict]:
+        query = """
+            SELECT nt.id, nt.name, c.flag
+            FROM national_teams nt
+            JOIN countries c ON c.name = nt.name
+            ORDER BY nt.name
+        """
+        with self._connect() as connection:
+            teams = [dict(row) for row in connection.execute(query).fetchall()]
+            players = connection.execute(
+                "SELECT p.national_team_id AS team_id, p.role AS role, p.overall AS overall "
+                "FROM players p WHERE p.national_team_id IS NOT NULL"
+            ).fetchall()
+
+        grouped: dict[str, list[tuple[str, float]]] = {}
+        for row in players:
+            grouped.setdefault(row["team_id"], []).append((row["role"], row["overall"]))
+
+        for team in teams:
+            ratings = club_ratings(team["id"], grouped.get(team["id"], []))
+            ratings.pop("club_id", None)
+            team.update(ratings)
+        return teams
 
     def squad(self, club_id: str) -> list[dict]:
         rows = self._player_rows("WHERE p.club_id = ?", (club_id,))

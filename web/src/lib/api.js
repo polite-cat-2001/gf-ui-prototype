@@ -25,5 +25,8 @@ export const api = {
   clubs: (leagueId) => get(`/api/clubs?league_id=${encodeURIComponent(leagueId)}`),
   club: (clubId) => get(`/api/clubs/${encodeURIComponent(clubId)}`),
   squad: (clubId) => get(`/api/clubs/${encodeURIComponent(clubId)}/players`),
+  clubRatings: (clubId) => get(`/api/clubs/${encodeURIComponent(clubId)}/ratings`),
+  leagueRatings: (leagueId) => get(`/api/leagues/${encodeURIComponent(leagueId)}/ratings`),
+  nationalTeams: () => get('/api/national-teams'),
   kits: (clubId) => get(`/api/clubs/${encodeURIComponent(clubId)}/kits`),
 }

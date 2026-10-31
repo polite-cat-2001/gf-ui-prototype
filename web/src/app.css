@@ -616,6 +616,274 @@ button:focus-visible,
   border-left: 7px solid rgba(29, 33, 56, 0.45);
 }
 
+/* ---------- team select ---------- */
+
+.teams {
+  --col: clamp(140px, 20vh, 210px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  width: min(1480px, 100%);
+}
+
+.team {
+  display: grid;
+  grid-template-rows: minmax(0, 19%) minmax(0, 1fr) minmax(0, 26%);
+  gap: var(--gap);
+  justify-self: center;
+  width: 100%;
+  max-width: 512px;
+  height: clamp(560px, 86vh, 820px);
+  transition: opacity 200ms linear;
+}
+
+.team.is-idle {
+  opacity: 0.5;
+}
+
+.team__block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(245, 247, 250, 0.95), rgba(245, 247, 250, 0.8));
+  color: var(--ink);
+  overflow: hidden;
+  transition:
+    background-color 160ms linear,
+    color 160ms linear;
+}
+
+.team__block.is-focus {
+  background: rgba(23, 27, 63, 0.96);
+  color: var(--focus-ink);
+}
+
+.team__block--mark {
+  background: rgba(23, 27, 63, 0.66);
+  color: var(--focus-ink);
+}
+
+.team.is-ready .team__block {
+  background: rgba(23, 27, 63, 0.66);
+  color: var(--focus-ink);
+}
+
+.team__block--country,
+.team__block--league {
+  justify-content: flex-start;
+  padding-top: 8px;
+}
+
+.team__block--country .team__art,
+.team__block--league .team__art {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.team__block--club {
+  justify-content: flex-start;
+  padding-top: 10px;
+  gap: 0;
+}
+
+.team__name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 100%;
+}
+
+.team__name--country {
+  font-size: 24px;
+}
+
+.team__name--club {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 2.2em;
+  font-size: clamp(24px, 2.3vw, 36px);
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.team__name--league {
+  font-size: 21px;
+}
+
+.team__block.is-focus .team__name {
+  color: var(--focus-mark);
+}
+
+.team__art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--col);
+  max-width: 100%;
+}
+
+.team__art--crest {
+  flex: 0 0 auto;
+  width: var(--col);
+}
+
+.team__globe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  color: var(--ink);
+}
+
+.team__block.is-focus .team__globe {
+  color: var(--focus-mark);
+}
+
+.team__flag {
+  height: 64px;
+  width: auto;
+  max-width: 120px;
+}
+
+.team__crest {
+  width: var(--col);
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 22px rgba(4, 9, 20, 0.24));
+}
+
+.team__stars {
+  --star-empty: rgba(29, 33, 56, 0.18);
+  display: flex;
+  justify-content: space-between;
+  width: var(--col);
+  margin-top: 8px;
+  font-size: calc(var(--col) / 6);
+  line-height: 1;
+}
+
+.team__block.is-focus .team__stars,
+.team.is-ready .team__stars {
+  --star-empty: rgba(246, 248, 251, 0.24);
+}
+
+.team__star {
+  color: var(--star-empty);
+}
+
+.team__star--full {
+  color: #e9c43c;
+}
+
+.team__star--half {
+  background: linear-gradient(90deg, #e9c43c 50%, var(--star-empty) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.team__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: var(--col);
+  margin-top: 10px;
+}
+
+.team__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.team__stat em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.team__stat b {
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 2.4vw, 36px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.team__block.is-focus .team__stat em,
+.team.is-ready .team__stat em {
+  color: var(--focus-ink-2);
+}
+
+.team__block.is-focus .team__stat b,
+.team.is-ready .team__stat b {
+  color: var(--focus-ink);
+}
+
+.team__league {
+  height: clamp(72px, 11vh, 120px);
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
+  filter: drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9)) drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9)) drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9));
+}
+
+.team__mark {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--focus-ink);
+}
+
+.team__mark--ready {
+  font-size: 40px;
+  font-weight: 800;
+}
+
+.team__cue {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -9px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+}
+
+.team__cue--left {
+  left: -32px;
+  border-right: 12px solid var(--focus-mark);
+}
+
+.team__cue--right {
+  right: -32px;
+  border-left: 12px solid var(--focus-mark);
+}
+
+.teams__error {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #ff9ba8;
+}
+
 /* ---------- panel ---------- */
 
 .panel {

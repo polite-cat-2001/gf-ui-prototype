@@ -7,6 +7,7 @@
   import TileGrid from './lib/TileGrid.svelte'
   import MenuPanel from './lib/MenuPanel.svelte'
   import SideSelect from './lib/SideSelect.svelte'
+  import TeamSelect from './lib/TeamSelect.svelte'
 
   const tabs = [
     { id: 'play', label: 'Играть' },
@@ -113,6 +114,7 @@
 
   let screen = $state('menu')
   let lastInput = $state('keys')
+  let teamScreen = $state(null)
   let padFrame
   const padHeld = [null, null, null, null]
   const sideOrder = ['home', 'center', 'away']
@@ -130,6 +132,21 @@
   const crumbs = $derived(top ? [tabs[tabIndex].label, ...stack.map((panel) => panel.title)] : [])
 
   const hints = $derived.by(() => {
+    if (screen === 'teams') {
+      return lastInput === 'pad'
+        ? [
+            { keys: ['A'], label: 'Утвердить' },
+            { keys: ['B'], label: 'Назад' },
+            { keys: ['◀', '▶'], label: 'Значение' },
+            { keys: ['▲', '▼'], label: 'Блок' },
+          ]
+        : [
+            { keys: ['←', '→'], label: 'Значение' },
+            { keys: ['↑', '↓'], label: 'Блок' },
+            { keys: ['Enter'], label: 'Утвердить' },
+            { keys: ['Esc'], label: 'Назад' },
+          ]
+    }
     if (screen === 'sides') {
       return lastInput === 'pad'
         ? [
@@ -191,11 +208,19 @@
 
   function readPad(pad) {
     const pressed = (index) => pad.buttons?.[index]?.pressed
+    if (pressed(12)) return 'up'
+    if (pressed(13)) return 'down'
     if (pressed(14)) return 'left'
     if (pressed(15)) return 'right'
     const x = pad.axes?.[0] ?? 0
-    if (x < -0.55) return 'left'
-    if (x > 0.55) return 'right'
+    const y = pad.axes?.[1] ?? 0
+    if (Math.abs(x) > Math.abs(y)) {
+      if (x < -0.55) return 'left'
+      if (x > 0.55) return 'right'
+    } else {
+      if (y < -0.55) return 'up'
+      if (y > 0.55) return 'down'
+    }
     return null
   }
 
@@ -212,9 +237,30 @@
         if (!connected) device.side = 'center'
       }
 
-      const direction = connected ? readPad(pad) : null
-      if (direction && direction !== padHeld[slot]) moveDevice(device, direction)
-      padHeld[slot] = direction
+      const before = padHeld[slot] ?? { dir: null, confirm: false, back: false }
+      const now = connected
+        ? {
+            dir: readPad(pad),
+            confirm: Boolean(pad.buttons?.[0]?.pressed),
+            back: Boolean(pad.buttons?.[1]?.pressed),
+          }
+        : { dir: null, confirm: false, back: false }
+
+      if (screen === 'sides') {
+        if (now.dir && now.dir !== before.dir && (now.dir === 'left' || now.dir === 'right')) {
+          moveDevice(device, now.dir)
+        }
+      } else if (screen === 'teams') {
+        const dirEdge = now.dir && now.dir !== before.dir
+        const confirmEdge = now.confirm && !before.confirm
+        const backEdge = now.back && !before.back
+        if (dirEdge || confirmEdge || backEdge) lastInput = 'pad'
+        if (dirEdge) teamScreen?.input(device.id, now.dir)
+        if (confirmEdge) teamScreen?.input(device.id, 'confirm')
+        if (backEdge) teamScreen?.input(device.id, 'back')
+      }
+
+      padHeld[slot] = now
     }
 
     padFrame = requestAnimationFrame(pollPads)
@@ -257,6 +303,10 @@
   }
 
   function back() {
+    if (screen === 'teams') {
+      transitionTo(() => (screen = 'sides'))
+      return
+    }
     if (screen === 'sides') {
       transitionTo(() => (screen = 'menu'))
       return
@@ -369,6 +419,23 @@
   function handleKeydown(event) {
     if (leaving) return
 
+    if (screen === 'teams') {
+      const action = {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        ArrowUp: 'up',
+        ArrowDown: 'down',
+        Enter: 'confirm',
+        Escape: 'back',
+      }[event.key]
+      if (action) {
+        event.preventDefault()
+        lastInput = 'keys'
+        teamScreen?.input('keyboard', action)
+      }
+      return
+    }
+
     if (screen === 'sides') {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -379,6 +446,8 @@
         moveDevice(keyboard, event.key === 'ArrowLeft' ? 'left' : 'right')
       } else if (event.key === 'Enter') {
         event.preventDefault()
+        lastInput = 'keys'
+        transitionTo(() => (screen = 'teams'))
       }
       return
     }
@@ -481,6 +550,13 @@
           />
         {:else if screen === 'sides'}
           <SideSelect {devices} onmove={moveById} />
+        {:else if screen === 'teams'}
+          <TeamSelect
+            bind:this={teamScreen}
+            {devices}
+            onback={() => back()}
+            onready={() => {}}
+          />
         {:else}
           <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />
           <TileGrid

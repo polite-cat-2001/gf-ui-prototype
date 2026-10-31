@@ -39,6 +39,10 @@
     <path d="M8.2 10.6v3M6.7 12.1h3" />
     <circle cx="15.6" cy="11.2" r=".85" fill="currentColor" stroke="none" />
     <circle cx="17.4" cy="13" r=".85" fill="currentColor" stroke="none" />
+  {:else if name === 'globe'}
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3c2.7 2.6 4.2 5.7 4.2 9s-1.5 6.4-4.2 9c-2.7-2.6-4.2-5.7-4.2-9S9.3 5.6 12 3Z" />
   {:else if name === 'keyboard'}
     <rect x="2.6" y="7.2" width="18.8" height="9.6" />
     <path

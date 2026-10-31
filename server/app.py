@@ -110,6 +110,24 @@ class Kits(BaseModel):
     gk2: str | None = None
 
 
+class ClubRatings(BaseModel):
+    club_id: str
+    attack: int | None = None
+    midfield: int | None = None
+    defence: int | None = None
+    stars: float | None = None
+
+
+class NationalTeam(BaseModel):
+    id: str
+    name: str
+    flag: str
+    attack: int | None = None
+    midfield: int | None = None
+    defence: int | None = None
+    stars: float | None = None
+
+
 def create_app(db_path: Path | None = None) -> FastAPI:
     canon = Canon(db_path or default_db_path())
     app = FastAPI(title="GF UI Prototype API", version="0.1.0")
@@ -156,6 +174,20 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="club not found")
         return result
 
+    @app.get("/api/clubs/{club_id}/ratings", response_model=ClubRatings)
+    def club_ratings(club_id: str):
+        result = canon.club_ratings(club_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="club not found")
+        return result
+
+    @app.get("/api/leagues/{league_id}/ratings", response_model=list[ClubRatings])
+    def league_ratings(league_id: str):
+        result = canon.league_ratings(league_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="league not found")
+        return result
+
     @app.get("/api/clubs/{club_id}/players", response_model=list[PlayerSummary])
     def squad(club_id: str):
         if canon.club(club_id) is None:
@@ -172,6 +204,10 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             if (folder / f"{name}.png").exists():
                 payload[name] = f"/raster/teams_kits/{club_id}/{name}.png"
         return payload
+
+    @app.get("/api/national-teams", response_model=list[NationalTeam])
+    def national_teams():
+        return canon.national_teams()
 
     @app.get("/api/players/{player_id}", response_model=PlayerDetail)
     def player(player_id: str):

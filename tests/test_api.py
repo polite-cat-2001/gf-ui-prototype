@@ -79,7 +79,40 @@ def test_player_detail_has_stats(client: TestClient):
     assert len(player["stats"]) >= 22
 
 
+def test_club_ratings_are_computed_from_the_squad(client: TestClient):
+    response = client.get("/api/clubs/131/ratings")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["club_id"] == "131"
+    assert 80 <= payload["attack"] <= 95
+    assert 80 <= payload["midfield"] <= 95
+    assert 80 <= payload["defence"] <= 95
+    assert payload["stars"] == 5
+
+
+def test_league_ratings_cover_every_club(client: TestClient):
+    response = client.get("/api/leagues/ES1/ratings")
+    assert response.status_code == 200
+    ratings = response.json()
+    assert len(ratings) == 20
+    assert all({"club_id", "attack", "midfield", "defence", "stars"} <= set(row) for row in ratings)
+    assert {"club_id": "131", "attack": 88} == {key: next(r for r in ratings if r["club_id"] == "131")[key] for key in ("club_id", "attack")}
+
+
+def test_national_teams_come_with_ratings(client: TestClient):
+    response = client.get("/api/national-teams")
+    assert response.status_code == 200
+    teams = response.json()
+    assert len(teams) == 101
+    argentina = next(team for team in teams if team["name"] == "Argentina")
+    assert argentina["flag"].startswith("/raster/country_flags/")
+    assert argentina["stars"] == 5.0
+    assert argentina["attack"] >= argentina["defence"]
+
+
 def test_unknown_records_return_404(client: TestClient):
     assert client.get("/api/clubs/does-not-exist").status_code == 404
     assert client.get("/api/clubs/does-not-exist/players").status_code == 404
+    assert client.get("/api/clubs/does-not-exist/ratings").status_code == 404
+    assert client.get("/api/leagues/does-not-exist/ratings").status_code == 404
     assert client.get("/api/players/does-not-exist").status_code == 404
