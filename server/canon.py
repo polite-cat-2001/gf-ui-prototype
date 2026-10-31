@@ -18,6 +18,7 @@ def _cutout_face_ids() -> frozenset[str]:
 
 
 CUTOUT_FACE_IDS = _cutout_face_ids()
+EMBLEM_DIR = REPO_ROOT / "data" / "raster" / "teams_emblems"
 
 COUNTRY_COLUMNS = "co.id, co.name, co.flag"
 LEAGUE_COLUMNS = "l.id, l.name, l.country_id, l.tier, l.tier_rank, l.logo"
@@ -92,6 +93,18 @@ def default_db_path() -> Path:
     return Path(os.environ.get("GF_CANON_DB", DEFAULT_DB))
 
 
+def _versioned(asset_path: str | None) -> str | None:
+    """Append the file mtime so a replaced asset busts the browser cache."""
+    if not asset_path:
+        return asset_path
+    relative = asset_path.removeprefix("/raster/")
+    try:
+        stamp = int((REPO_ROOT / "data" / "raster" / relative).stat().st_mtime)
+    except OSError:
+        return asset_path
+    return f"{asset_path}?v={stamp}"
+
+
 def age_from_birth_date(birth_date: str | None) -> int | None:
     if not birth_date:
         return None
@@ -157,7 +170,10 @@ class Canon:
         """
         with self._connect() as connection:
             rows = connection.execute(query).fetchall()
-        return [dict(row) for row in rows]
+        countries = [dict(row) for row in rows]
+        for country in countries:
+            country["flag"] = _versioned(country["flag"])
+        return countries
 
     def country(self, country_id: str) -> dict | None:
         query = f"SELECT {COUNTRY_COLUMNS} FROM countries co WHERE co.id = ?"
@@ -262,6 +278,9 @@ class Canon:
             grouped.setdefault(row["team_id"], []).append((row["role"], row["overall"]))
 
         for team in teams:
+            team["flag"] = _versioned(team["flag"])
+            emblem = f"/raster/teams_emblems/{team['id']}.png"
+            team["emblem"] = _versioned(emblem) if (EMBLEM_DIR / f"{team['id']}.png").exists() else None
             ratings = club_ratings(team["id"], grouped.get(team["id"], []))
             ratings.pop("club_id", None)
             team.update(ratings)

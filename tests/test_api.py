@@ -32,7 +32,7 @@ def test_countries_endpoint(client: TestClient):
     assert len(countries) == 106
     england = next(country for country in countries if country["name"] == "England")
     assert england["id"] == "189"
-    assert england["flag"] == "/raster/country_flags/189.png"
+    assert england["flag"].startswith("/raster/country_flags/189.png")
 
 
 def test_country_to_league_filter(client: TestClient):
@@ -106,6 +106,7 @@ def test_national_teams_come_with_ratings(client: TestClient):
     assert len(teams) == 101
     argentina = next(team for team in teams if team["name"] == "Argentina")
     assert argentina["flag"].startswith("/raster/country_flags/")
+    assert argentina["emblem"].startswith("/raster/teams_emblems/")
     assert argentina["stars"] == 5.0
     assert argentina["attack"] >= argentina["defence"]
 

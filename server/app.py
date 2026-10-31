@@ -13,6 +13,15 @@ RASTER_DIR = REPO_ROOT / "data" / "raster"
 WEB_DIST = REPO_ROOT / "web" / "dist"
 
 
+class RevalidatingStaticFiles(StaticFiles):
+    """Assets are replaced in place (trimmed flags, new faces), so browsers must revalidate."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 class MetaCounts(BaseModel):
     countries: int
     leagues: int
@@ -122,6 +131,7 @@ class NationalTeam(BaseModel):
     id: str
     name: str
     flag: str
+    emblem: str | None = None
     attack: int | None = None
     midfield: int | None = None
     defence: int | None = None
@@ -140,7 +150,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.mount("/raster", StaticFiles(directory=str(RASTER_DIR)), name="raster")
+    app.mount("/raster", RevalidatingStaticFiles(directory=str(RASTER_DIR)), name="raster")
 
     @app.get("/api/health")
     def health():

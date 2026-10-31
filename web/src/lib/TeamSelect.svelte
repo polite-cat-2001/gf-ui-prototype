@@ -60,7 +60,7 @@
       const teams = await loadNationalTeams()
       if (token !== side.seq) return
       side.leagues = [NATIONAL_LEAGUE]
-      side.clubs = teams.map((team) => ({ id: team.id, name: team.name, logo: team.flag }))
+      side.clubs = teams.map((team) => ({ id: team.id, name: team.name, logo: team.emblem ?? team.flag }))
       side.ratings = Object.fromEntries(teams.map((team) => [team.id, team]))
       return
     }
