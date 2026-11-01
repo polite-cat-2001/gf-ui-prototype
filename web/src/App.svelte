@@ -8,6 +8,8 @@
   import MenuPanel from './lib/MenuPanel.svelte'
   import SideSelect from './lib/SideSelect.svelte'
   import TeamSelect from './lib/TeamSelect.svelte'
+  import KitSelect from './lib/KitSelect.svelte'
+  import MatchHub from './lib/MatchHub.svelte'
 
   const tabs = [
     { id: 'play', label: 'Играть' },
@@ -115,6 +117,9 @@
   let screen = $state('menu')
   let lastInput = $state('keys')
   let teamScreen = $state(null)
+  let kitScreen = $state(null)
+  let hubScreen = $state(null)
+  let pickedTeams = $state(null)
   let padFrame
   const padHeld = [null, null, null, null]
   const sideOrder = ['home', 'center', 'away']
@@ -132,6 +137,19 @@
   const crumbs = $derived(top ? [tabs[tabIndex].label, ...stack.map((panel) => panel.title)] : [])
 
   const hints = $derived.by(() => {
+    if (screen === 'kits') {
+      return lastInput === 'pad'
+        ? [
+            { keys: ['A'], label: 'Утвердить' },
+            { keys: ['B'], label: 'Назад' },
+            { keys: ['◀', '▶'], label: 'Комплект' },
+          ]
+        : [
+            { keys: ['←', '→'], label: 'Комплект' },
+            { keys: ['Enter'], label: 'Утвердить' },
+            { keys: ['Esc'], label: 'Назад' },
+          ]
+    }
     if (screen === 'teams') {
       return lastInput === 'pad'
         ? [
@@ -157,6 +175,19 @@
         : [
             { keys: ['←', '→'], label: 'Сторона' },
             { keys: ['Enter'], label: 'Далее' },
+            { keys: ['Esc'], label: 'Назад' },
+          ]
+    }
+    if (screen === 'hub') {
+      return lastInput === 'pad'
+        ? [
+            { keys: ['A'], label: 'Выбрать' },
+            { keys: ['B'], label: 'Назад' },
+            { keys: ['◀', '▶'], label: 'Действие' },
+          ]
+        : [
+            { keys: ['←', '→'], label: 'Действие' },
+            { keys: ['Enter'], label: 'Выбрать' },
             { keys: ['Esc'], label: 'Назад' },
           ]
     }
@@ -258,6 +289,14 @@
         if (dirEdge) teamScreen?.input(device.id, now.dir)
         if (confirmEdge) teamScreen?.input(device.id, 'confirm')
         if (backEdge) teamScreen?.input(device.id, 'back')
+      } else if (screen === 'kits') {
+        const dirEdge = now.dir && now.dir !== before.dir
+        const confirmEdge = now.confirm && !before.confirm
+        const backEdge = now.back && !before.back
+        if (dirEdge || confirmEdge || backEdge) lastInput = 'pad'
+        if (dirEdge) kitScreen?.input(device.id, now.dir)
+        if (confirmEdge) kitScreen?.input(device.id, 'confirm')
+        if (backEdge) kitScreen?.input(device.id, 'back')
       }
 
       padHeld[slot] = now
@@ -303,6 +342,10 @@
   }
 
   function back() {
+    if (screen === 'kits') {
+      transitionTo(() => (screen = 'teams'))
+      return
+    }
     if (screen === 'teams') {
       transitionTo(() => (screen = 'sides'))
       return
@@ -315,6 +358,13 @@
     transitionTo(() => {
       stack.pop()
       rowIndex = 0
+    })
+  }
+
+  function startKits(selection) {
+    transitionTo(() => {
+      pickedTeams = selection
+      screen = 'kits'
     })
   }
 
@@ -419,7 +469,7 @@
   function handleKeydown(event) {
     if (leaving) return
 
-    if (screen === 'teams') {
+    if (screen === 'teams' || screen === 'kits') {
       const action = {
         ArrowLeft: 'left',
         ArrowRight: 'right',
@@ -431,7 +481,8 @@
       if (action) {
         event.preventDefault()
         lastInput = 'keys'
-        teamScreen?.input('keyboard', action)
+        const target = screen === 'teams' ? teamScreen : kitScreen
+        target?.input('keyboard', action)
       }
       return
     }
@@ -555,7 +606,14 @@
             bind:this={teamScreen}
             {devices}
             onback={() => back()}
-            onready={() => {}}
+            onready={startKits}
+          />
+        {:else if screen === 'kits'}
+          <KitSelect
+            bind:this={kitScreen}
+            teams={pickedTeams}
+            {devices}
+            onback={() => back()}
           />
         {:else}
           <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />

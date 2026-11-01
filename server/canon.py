@@ -4,11 +4,14 @@ import json
 import os
 import sqlite3
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DB = REPO_ROOT / "canon.db"
 CUTOUT_FACES_DIR = REPO_ROOT / "data" / "raster" / "players_faces_cutout"
+KIT_SPECS_PATH = REPO_ROOT / "data" / "raster" / "teams_kits" / "specs.json"
+NATIONAL_KIT_SPECS_PATH = REPO_ROOT / "data" / "raster" / "teams_kits" / "national_specs.json"
 
 
 def _cutout_face_ids() -> frozenset[str]:
@@ -53,6 +56,16 @@ LINE_ROLES = {
 }
 
 LINE_SIZE = {"attack": 3, "midfield": 3, "defence": 4}
+
+KIT_IDS = ("main", "white", "black", "reserve")
+KIT_PATTERNS = {"plain", "stripes", "halves", "hoops", "sash"}
+FALLBACK_PALETTE = ["#F5F7FA", "#171B3F", "#5A5F78", "#1D2138"]
+FALLBACK_KITS = {
+    "main": {"shirt": 0, "shorts": 1, "pattern": "plain", "pattern_color": None},
+    "white": {"shirt": 0, "shorts": 0, "pattern": "plain", "pattern_color": None},
+    "black": {"shirt": 1, "shorts": 1, "pattern": "plain", "pattern_color": None},
+    "reserve": {"shirt": 2, "shorts": 1, "pattern": "plain", "pattern_color": None},
+}
 
 STAR_FLOOR = 59.0
 STAR_STEP = 7.0
@@ -124,6 +137,43 @@ def _json_list(value: str | None) -> list:
     except json.JSONDecodeError:
         return []
     return parsed if isinstance(parsed, list) else []
+
+
+@lru_cache(maxsize=1)
+def _club_spec_index() -> dict[str, dict]:
+    if not KIT_SPECS_PATH.exists():
+        return {}
+    rows = json.loads(KIT_SPECS_PATH.read_text(encoding="utf-8"))
+    return {str(row["id"]): row for row in rows}
+
+
+@lru_cache(maxsize=1)
+def _national_spec_index() -> dict[str, dict]:
+    if not NATIONAL_KIT_SPECS_PATH.exists():
+        return {}
+    rows = json.loads(NATIONAL_KIT_SPECS_PATH.read_text(encoding="utf-8"))
+    return {row["name"].strip().lower(): row for row in rows}
+
+
+def _palette_color(palette: list[str], index: int | None, fallback: str) -> str:
+    if isinstance(index, int) and 0 <= index < len(palette):
+        return palette[index]
+    return fallback
+
+
+def _kit_colors(palette: list[str], spec: dict | None) -> dict:
+    spec = spec or {}
+    pattern = spec.get("pattern")
+    if pattern not in KIT_PATTERNS:
+        pattern = "plain"
+    return {
+        "shirt": _palette_color(palette, spec.get("shirt"), FALLBACK_PALETTE[0]),
+        "shorts": _palette_color(palette, spec.get("shorts"), FALLBACK_PALETTE[0]),
+        "pattern": pattern,
+        "pattern_color": _palette_color(palette, spec.get("pattern_color"), "#000000")
+        if pattern != "plain"
+        else None,
+    }
 
 
 class Canon:
@@ -285,6 +335,30 @@ class Canon:
             ratings.pop("club_id", None)
             team.update(ratings)
         return teams
+
+    def kit_specs(self, team_id: str) -> dict | None:
+        club = self.club(team_id)
+        spec = None
+        name = None
+        if club is not None:
+            name = club["name"]
+            spec = _club_spec_index().get(team_id)
+        else:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT name FROM national_teams WHERE id = ?", (team_id,)
+                ).fetchone()
+            if row is None:
+                return None
+            name = row["name"]
+            spec = _national_spec_index().get(name.strip().lower())
+
+        palette = spec.get("palette") if spec else FALLBACK_PALETTE
+        kits = [
+            {"id": kit_id, **_kit_colors(palette, (spec or {}).get(kit_id) or FALLBACK_KITS[kit_id])}
+            for kit_id in KIT_IDS
+        ]
+        return {"team_id": team_id, "name": name, "kits": kits}
 
     def squad(self, club_id: str) -> list[dict]:
         rows = self._player_rows("WHERE p.club_id = ?", (club_id,))

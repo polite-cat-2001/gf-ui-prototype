@@ -119,6 +119,20 @@ class Kits(BaseModel):
     gk2: str | None = None
 
 
+class KitColors(BaseModel):
+    id: str
+    shirt: str
+    shorts: str
+    pattern: str
+    pattern_color: str | None = None
+
+
+class KitSpecs(BaseModel):
+    team_id: str
+    name: str
+    kits: list[KitColors]
+
+
 class ClubRatings(BaseModel):
     club_id: str
     attack: int | None = None
@@ -214,6 +228,13 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             if (folder / f"{name}.png").exists():
                 payload[name] = f"/raster/teams_kits/{club_id}/{name}.png"
         return payload
+
+    @app.get("/api/teams/{team_id}/kit-specs", response_model=KitSpecs)
+    def kit_specs(team_id: str):
+        result = canon.kit_specs(team_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="team not found")
+        return result
 
     @app.get("/api/national-teams", response_model=list[NationalTeam])
     def national_teams():

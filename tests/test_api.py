@@ -62,6 +62,36 @@ def test_kits_endpoint(client: TestClient):
     assert payload["main"] == "/raster/teams_kits/11/main.png"
 
 
+def test_kit_specs_resolve_club_colors(client: TestClient):
+    response = client.get("/api/teams/131/kit-specs")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "FC Barcelona"
+    kits = {kit["id"]: kit for kit in payload["kits"]}
+    assert list(kits) == ["main", "white", "black", "reserve"]
+    assert kits["main"] == {
+        "id": "main",
+        "shirt": "#004C99",
+        "shorts": "#004C99",
+        "pattern": "stripes",
+        "pattern_color": "#A60042",
+    }
+    assert kits["reserve"]["pattern"] == "plain"
+    assert kits["reserve"]["pattern_color"] is None
+
+
+def test_kit_specs_match_national_teams_by_name(client: TestClient):
+    response = client.get("/api/teams/3377/kit-specs")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "France"
+    assert payload["kits"][0]["shirt"] == "#123163"
+
+
+def test_unknown_team_kit_specs_return_404(client: TestClient):
+    assert client.get("/api/teams/does-not-exist/kit-specs").status_code == 404
+
+
 def test_selected_club_returns_its_squad(client: TestClient):
     response = client.get("/api/clubs/11/players")
     assert response.status_code == 200

@@ -29,4 +29,5 @@ export const api = {
   leagueRatings: (leagueId) => get(`/api/leagues/${encodeURIComponent(leagueId)}/ratings`),
   nationalTeams: () => get('/api/national-teams'),
   kits: (clubId) => get(`/api/clubs/${encodeURIComponent(clubId)}/kits`),
+  kitSpecs: (teamId) => get(`/api/teams/${encodeURIComponent(teamId)}/kit-specs`),
 }

@@ -86,17 +86,34 @@
     side.clubIndex = (side.clubIndex + step + side.clubs.length) % side.clubs.length
   }
 
+  function selection() {
+    const pick = (side) => {
+      const club = side.clubs[side.clubIndex]
+      const league = side.leagues[side.leagueIndex]
+      const country = countries[side.countryIndex]
+      return {
+        id: club.id,
+        name: club.name,
+        logo: club.logo,
+        league: league?.name ?? '',
+        country: country?.name ?? '',
+      }
+    }
+    return { home: pick(sideOf('home')), away: pick(sideOf('away')) }
+  }
+
   function confirm(side) {
+    if (!side.clubs[side.clubIndex]) return
     side.ready = true
     if (parallel) {
-      if (sideOf('home').ready && sideOf('away').ready) onready?.()
+      if (sideOf('home').ready && sideOf('away').ready) onready?.(selection())
       return
     }
     if (side.id === 'home') {
       activeSide = 'away'
       sideOf('away').focus = 'club'
     } else {
-      onready?.()
+      onready?.(selection())
     }
   }
 

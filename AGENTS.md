@@ -25,8 +25,8 @@ This file provides guidance to agents working with code in this repository.
 - Сервер — `server.py` (FastAPI, порт 8766): read-only канон из `canon.db`
   (`/api/meta`, `/api/countries`, `/api/leagues`, `/api/clubs`, `/api/players`) и статика
   `/raster`. Моков нет.
-- Клиент — `web/` (Svelte 5 + Vite, dev на 5174): заготовка главного меню, выбора команды и
-  составов. Стили — `web/src/app.css`; UI сверяется с Figma (ссылка ниже).
+- Клиент — `web/` (Svelte 5 + Vite, dev на 5174): главное меню, выбор стороны и команд, выбор форм
+  команд и заглушка составов. Стили — `web/src/app.css`; UI сверяется с Figma (ссылка ниже).
 - Данные — `data/json/` (экспорт из transfermarkt), `data/raster/` (лица игроков, эмблемы, флаги,
   формы клубов), `canon.db` и `ratings_output.json` для пересборки. Пути к фото шаблонные:
   `/raster/{players_faces|players_faces_cutout|teams_emblems|teams_flags|country_flags|leagues|teams_kits}/…`.
