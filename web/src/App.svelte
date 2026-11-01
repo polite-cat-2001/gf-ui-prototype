@@ -297,6 +297,14 @@
         if (dirEdge) kitScreen?.input(device.id, now.dir)
         if (confirmEdge) kitScreen?.input(device.id, 'confirm')
         if (backEdge) kitScreen?.input(device.id, 'back')
+      } else if (screen === 'hub') {
+        const dirEdge = now.dir && now.dir !== before.dir
+        const confirmEdge = now.confirm && !before.confirm
+        const backEdge = now.back && !before.back
+        if (dirEdge || confirmEdge || backEdge) lastInput = 'pad'
+        if (dirEdge) hubScreen?.input(device.id, now.dir)
+        if (confirmEdge) hubScreen?.input(device.id, 'confirm')
+        if (backEdge) hubScreen?.input(device.id, 'back')
       }
 
       padHeld[slot] = now
@@ -342,6 +350,10 @@
   }
 
   function back() {
+    if (screen === 'hub') {
+      transitionTo(() => (screen = 'kits'))
+      return
+    }
     if (screen === 'kits') {
       transitionTo(() => (screen = 'teams'))
       return
@@ -366,6 +378,10 @@
       pickedTeams = selection
       screen = 'kits'
     })
+  }
+
+  function startHub() {
+    transitionTo(() => (screen = 'hub'))
   }
 
   function openTile(tile) {
@@ -503,6 +519,21 @@
       return
     }
 
+    if (screen === 'hub') {
+      const action = {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        Enter: 'confirm',
+        Escape: 'back',
+      }[event.key]
+      if (action) {
+        event.preventDefault()
+        lastInput = 'keys'
+        hubScreen?.input('keyboard', action)
+      }
+      return
+    }
+
     if (top) {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -614,7 +645,10 @@
             teams={pickedTeams}
             {devices}
             onback={() => back()}
+            onready={startHub}
           />
+        {:else if screen === 'hub'}
+          <MatchHub bind:this={hubScreen} teams={pickedTeams} onback={() => back()} />
         {:else}
           <TabBar {tabs} index={tabIndex} focused={zone === 'tabs'} onselect={selectTab} />
           <TileGrid

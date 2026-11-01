@@ -54,6 +54,21 @@
   {:else if name === 'volume'}
     <path d="M5 9.6h3.2L13 5.8v12.4L8.2 14.4H5Z" fill="currentColor" stroke="none" />
     <path d="M15.8 8.8a4.4 4.4 0 0 1 0 6.4M18.2 6.4a7.8 7.8 0 0 1 0 11.2" />
+  {:else if name === 'pitch'}
+    <rect x="3" y="5" width="18" height="14" />
+    <path d="M12 5v14" />
+    <circle cx="12" cy="12" r="3" />
+    <path d="M3 9h3v6H3M21 9h-3v6h3" />
+  {:else if name === 'tactics'}
+    <rect x="4" y="4" width="16" height="16" />
+    <path d="M8 4v16" />
+    <circle cx="6" cy="8" r="1" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="12" r="1" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="16" r="1" fill="currentColor" stroke="none" />
+    <path d="M12 9h5M12 12h5M12 15h5" />
+  {:else if name === 'sides'}
+    <path d="M3 5v14M21 5v14" />
+    <path d="M8 8 4 12l4 4M16 8l4 4-4 4" />
   {:else}
     <circle cx="12" cy="12" r="9.2" />
   {/if}

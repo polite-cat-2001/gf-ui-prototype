@@ -4,7 +4,7 @@
   import MatchPreview from './MatchPreview.svelte'
   import { kitLabel, loadKitSpecs } from './kits.js'
 
-  let { teams, devices = [], onback } = $props()
+  let { teams, devices = [], onback, onready } = $props()
 
   let sides = $state([
     { id: 'home', kits: [], kitIndex: 0, ready: false },
@@ -53,6 +53,7 @@
       const other = sideOf(side.id === 'home' ? 'away' : 'home')
       if (!other.ready) activeSide = other.id
     }
+    if (sideOf('home').ready && sideOf('away').ready) onready?.()
   }
 
   function back() {

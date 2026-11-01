@@ -101,6 +101,14 @@ def test_selected_club_returns_its_squad(client: TestClient):
     assert any(player["name"] == "David Raya" for player in squad)
 
 
+def test_selected_national_team_returns_its_squad(client: TestClient):
+    response = client.get("/api/national-teams/3375/players")
+    assert response.status_code == 200
+    squad = response.json()
+    assert len(squad) >= 20
+    assert all(player["national_team_id"] == "3375" for player in squad)
+
+
 def test_player_detail_has_stats(client: TestClient):
     response = client.get("/api/players/262749")
     assert response.status_code == 200

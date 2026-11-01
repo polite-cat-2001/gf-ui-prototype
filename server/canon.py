@@ -367,6 +367,19 @@ class Canon:
         rows.sort(key=lambda player: (ROLE_ORDER.get(player["role"], 99), -player["overall"], player["name"]))
         return rows
 
+    def national_squad(self, team_id: str) -> list[dict] | None:
+        with self._connect() as connection:
+            exists = connection.execute(
+                "SELECT 1 FROM national_teams WHERE id = ?", (team_id,)
+            ).fetchone()
+            if exists is None:
+                return None
+        rows = self._player_rows("WHERE p.national_team_id = ?", (team_id,))
+        for player in rows:
+            player.pop("stats", None)
+        rows.sort(key=lambda player: (ROLE_ORDER.get(player["role"], 99), -player["overall"], player["name"]))
+        return rows
+
     def players_by_ids(self, player_ids: list[str], with_stats: bool = False) -> list[dict]:
         if not player_ids:
             return []

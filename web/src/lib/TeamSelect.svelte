@@ -97,6 +97,8 @@
         logo: club.logo,
         league: league?.name ?? '',
         country: country?.name ?? '',
+        kind: country?.id === 'national' ? 'national' : 'club',
+        rating: side.ratings[club.id] ?? null,
       }
     }
     return { home: pick(sideOf('home')), away: pick(sideOf('away')) }

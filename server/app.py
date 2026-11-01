@@ -240,6 +240,13 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     def national_teams():
         return canon.national_teams()
 
+    @app.get("/api/national-teams/{team_id}/players", response_model=list[PlayerSummary])
+    def national_squad(team_id: str):
+        result = canon.national_squad(team_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="national team not found")
+        return result
+
     @app.get("/api/players/{player_id}", response_model=PlayerDetail)
     def player(player_id: str):
         result = canon.player(player_id)
